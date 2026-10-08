@@ -3,12 +3,19 @@ import 'package:provider/provider.dart';
 import '../models/item.dart';
 import '../models/cart_model.dart';
 import '../repositories/item_repository.dart';
-import '../services/gemini_service.dart'; // เพิ่ม import สำหรับ GeminiService
+import '../repositories/favorites_repository.dart';
+import '../services/gemini_service.dart';
 import 'checkout_page.dart';
 
 class HomePage extends StatefulWidget {
   final ItemRepository repository;
-  const HomePage({super.key, required this.repository});
+  final FavoritesRepository favoritesRepository;
+
+  const HomePage({
+    super.key,
+    required this.repository,
+    required this.favoritesRepository,
+  });
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -70,56 +77,81 @@ class _HomePageState extends State<HomePage> {
                 ),
                 title: Text(item.title),
                 subtitle: Text('${item.price} บาท'),
-                trailing: IconButton(
-                  icon: const Icon(Icons.add_shopping_cart),
-                  onPressed: () {
-                    context.read<CartModel>().add(item);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('เพิ่ม "${item.title}" ลงตะกร้าแล้ว')),
-                    );
-                  },
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.favorite_border),
+                      onPressed: () async {
+                        try {
+                          await widget.favoritesRepository.addFavorite(
+                            item.id,
+                            item.title,
+                            item.price,
+                            item.imageUrl,
+                          );
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('บันทึก "${item.title}" ลงในรายการโปรดแล้ว'),
+                              ),
+                            );
+                          }
+                        } catch (e) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('เกิดข้อผิดพลาด: $e')),
+                            );
+                          }
+                        }
+                      },
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.add_shopping_cart),
+                      onPressed: () {
+                        context.read<CartModel>().add(item);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('เพิ่ม "${item.title}" ลงตะกร้าแล้ว')),
+                        );
+                      },
+                    ),
+                  ],
                 ),
               );
             },
           );
         },
       ),
-      // เพิ่มปุ่ม FloatingActionButton สำหรับทดสอบ Gemini ที่นี่
       floatingActionButton: FloatingActionButton(
         onPressed: _isGeminiLoading
             ? null
             : () async {
                 setState(() => _isGeminiLoading = true);
 
-                // 1. แสดง SnackBar แจ้งผู้ใช้ว่ากำลังโหลด
                 ScaffoldMessenger.of(context).hideCurrentSnackBar();
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('กำลังส่งคำถามไปหา Gemini...')),
                 );
 
                 try {
-                  // 2. เรียกใช้ GeminiService ตามโจทย์
                   final response = await GeminiService().generateText(
                     'ช่วยแต่งประโยคทักทายลูกค้าร้านค้าออนไลน์แบบเป็นกันเอง',
                   );
 
-                  // 3. แสดงผลลัพธ์ใน Debug Console
                   print('========== คำตอบจาก Gemini ==========');
                   print(response);
                   print('=====================================');
 
-                  // 4. แสดงผลลัพธ์ผ่าน SnackBar
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).hideCurrentSnackBar();
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text(response),
-                        duration: const Duration(seconds: 5), // ให้อยู่บนจอนานเพื่อแคปภาพ
+                        duration: const Duration(seconds: 5),
                       ),
                     );
                   }
                 } catch (e) {
-                  // กรณีเกิด Error หรือ Timeout
                   print('Error: $e');
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).hideCurrentSnackBar();

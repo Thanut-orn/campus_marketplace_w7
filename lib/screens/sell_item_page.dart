@@ -3,9 +3,13 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../models/listing_draft.dart';
 import '../services/gemini_vision_service.dart';
+import '../repositories/listing_draft_repository.dart';
+import 'my_drafts_page.dart';
 
 class SellItemPage extends StatefulWidget {
-  const SellItemPage({super.key});
+  final ListingDraftRepository draftRepository;
+
+  const SellItemPage({super.key, required this.draftRepository});
 
   @override
   State<SellItemPage> createState() => _SellItemPageState();
@@ -29,7 +33,7 @@ class _SellItemPageState extends State<SellItemPage> {
 
   // ตัวแปรสำหรับจัดการ 3 สถานะ: กำลังวิเคราะห์ / สำเร็จ / ผิดพลาด
   bool _isLoading = false;
-  String? _errorMessage;
+  String? _errorMessage = null;
   ListingDraft? _draft;
   // ร่างประกาศฉบับสุดท้ายที่กดยืนยันแล้ว (ขั้นตอนที่ 5.2)
   ListingDraft? _confirmedDraft;
@@ -103,6 +107,18 @@ class _SellItemPageState extends State<SellItemPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('ลงขายสินค้า'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.history),
+            tooltip: 'ร่างประกาศของฉัน',
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => MyDraftsPage(repository: widget.draftRepository),
+              ),
+            ),
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
@@ -228,16 +244,30 @@ class _SellItemPageState extends State<SellItemPage> {
               ),
               const SizedBox(height: 16),
               ElevatedButton.icon(
-                onPressed: () {
-                  // 1. ซ่อนคีย์บอร์ด (ถ้าเปิดอยู่) เพื่อให้เห็น SnackBar ชัดเจน
+                onPressed: () async {
                   FocusScope.of(context).unfocus();
 
-                  // 2. เก็บค่าจากฟอร์มเป็นร่างประกาศฉบับสุดท้ายไว้ใน State ของแอป (ขั้นตอนที่ 5.2)
                   final confirmed = ListingDraft(
                     title: _titleController.text.trim(),
                     category: _categoryController.text.trim(),
                     description: _descriptionController.text.trim(),
                   );
+
+                  if (_selectedImage != null) {
+                    try {
+                      await widget.draftRepository.saveDraft(
+                        confirmed,
+                        _selectedImage!.path,
+                      );
+                    } catch (e) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('เกิดข้อผิดพลาดในการบันทึก: $e')),
+                        );
+                      }
+                      return;
+                    }
+                  }
 
                   setState(() {
                     _confirmedDraft = confirmed;
@@ -251,15 +281,16 @@ class _SellItemPageState extends State<SellItemPage> {
 
                   debugPrint('บันทึกร่างประกาศ: ${_confirmedDraft?.title}');
 
-                  // 3. ปิด SnackBar เดิมก่อน และแสดงข้อความยืนยันให้เห็นชัดเจน
-                  ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('บันทึกร่างประกาศเรียบร้อยแล้ว'),
-                      duration: Duration(seconds: 4),
-                      behavior: SnackBarBehavior.floating,
-                    ),
-                  );
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('บันทึกร่างประกาศเรียบร้อยแล้ว'),
+                        duration: Duration(seconds: 4),
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  }
                 },
                 icon: const Icon(Icons.check),
                 label: const Text('ยืนยันร่างประกาศ'),
