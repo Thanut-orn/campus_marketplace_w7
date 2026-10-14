@@ -3,14 +3,14 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class GeminiService {
-  static const _model = 'gemini-3.5-flash';
+  static const _model = 'gemini-3.5-flash-lite';
 
   static const List<String> _models = [
     _model,
-    'gemini-2.0-flash',
+    'gemini-3.1-flash-lite',
+    'gemini-2.5-flash-lite',
     'gemini-1.5-flash',
-    'gemini-1.5-flash-8b',
-    'gemini-2.5-flash',
+    'gemini-2.0-flash',
   ];
 
   static const _apiKey = String.fromEnvironment('GEMINI_API_KEY');

@@ -33,7 +33,7 @@ class _SellItemPageState extends State<SellItemPage> {
 
   // ตัวแปรสำหรับจัดการ 3 สถานะ: กำลังวิเคราะห์ / สำเร็จ / ผิดพลาด
   bool _isLoading = false;
-  String? _errorMessage = null;
+  String? _errorMessage;
   ListingDraft? _draft;
   // ร่างประกาศฉบับสุดท้ายที่กดยืนยันแล้ว (ขั้นตอนที่ 5.2)
   ListingDraft? _confirmedDraft;

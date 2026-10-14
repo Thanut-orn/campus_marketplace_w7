@@ -43,7 +43,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
         title: const Text('รายการโปรด'),
       ),
       body: FutureBuilder<List<FavoriteItem>>(
-        future: widget.repository.getAllFavorites(),
+        future: _favoritesFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());

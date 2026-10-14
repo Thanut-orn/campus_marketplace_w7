@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class Item {
   final int id;
   final String title;
@@ -5,6 +7,7 @@ class Item {
   final String description;
   final String category;
   final String imageUrl;
+  final String? sellerId;
 
   const Item({
     required this.id,
@@ -13,6 +16,7 @@ class Item {
     required this.description,
     required this.category,
     required this.imageUrl,
+    this.sellerId,
   });
 
   factory Item.fromJson(Map<String, dynamic> json) {
@@ -30,6 +34,33 @@ class Item {
       description: description,
       category: category,
       imageUrl: imageUrl,
+      sellerId: json['sellerId'] as String?,
     );
+  }
+
+  factory Item.fromFirestore(DocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>? ?? {};
+    return Item(
+      id: data['id'] is int
+          ? data['id'] as int
+          : (int.tryParse(doc.id) ?? doc.id.hashCode),
+      title: data['title'] as String? ?? '',
+      price: (data['price'] as num?)?.toDouble() ?? 0.0,
+      description: data['description'] as String? ?? '',
+      category: data['category'] as String? ?? '',
+      imageUrl: data['imageUrl'] as String? ?? data['image'] as String? ?? '',
+      sellerId: data['sellerId'] as String?,
+    );
+  }
+
+  Map<String, dynamic> toFirestore() {
+    return {
+      'title': title,
+      'price': price,
+      'description': description,
+      'category': category,
+      'imageUrl': imageUrl,
+      'sellerId': sellerId,
+    };
   }
 }
